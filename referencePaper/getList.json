@@ -1,0 +1,63 @@
+{
+    "data": [
+        {
+            "id": "bMZMBEM",
+            "oId": "99430",
+            "purchaseNo": "",
+            "orderTime": 1771990909000,
+            "delivery": 1771948800000,
+            "quota": null,
+            "quantities": {
+                "杂色": {
+                    "均码": 30
+                }
+            },
+            "product": {
+                "杂色": {
+                    "均码": 30
+                }
+            },
+            "orderQuantity": 0,
+            "totalQuantity": 30,
+            "productQuantity": 30,
+            "customName": "",
+            "process": 0.25,
+            "isLock": false,
+            "isOutsource": 0,
+            "isOutTicket": false,
+            "multiMachine": false,
+            "multiPrice": 1,
+            "isMaterial": 0,
+            "isMainMaterial": 0,
+            "sort": 0,
+            "isCompleted": false,
+            "dpmCount": 0,
+            "merchandiser": null,
+            "avatar": null,
+            "customerName": null,
+            "customerNo": null,
+            "categoryId": 299141,
+            "cId": "001",
+            "name": "圆领短袖，五分袖.",
+            "size": [
+                "均码"
+            ],
+            "color": [
+                "杂色"
+            ],
+            "imageUrl": "",
+            "colorImages": {
+                "杂色": ""
+            },
+            "machine": "19137",
+            "buildTime": 1771990924000,
+            "cutters": [
+                "xKIbhYmGtnwLA5A61O0HCzMVe0eN7iqT"
+            ],
+            "remark": ""
+        }
+    ],
+    "message": 0,
+    "code": 200,
+    "pageItem": 0
+}

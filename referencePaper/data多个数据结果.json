@@ -1,0 +1,175 @@
+{
+    "data": [
+        {
+            "id": "l1D0ABA",
+            "oId": "99678-3",
+            "purchaseNo": "",
+            "orderTime": 1772698897000,
+            "delivery": 1772640000000,
+            "quota": null,
+            "quantities": {
+                "杂色": {
+                    "均码": 1
+                }
+            },
+            "product": {
+                "杂色": {
+                    "均码": 1
+                }
+            },
+            "orderQuantity": 0,
+            "totalQuantity": 1,
+            "productQuantity": 1,
+            "customName": "",
+            "process": 0,
+            "isLock": false,
+            "isOutsource": 0,
+            "isOutTicket": false,
+            "multiMachine": false,
+            "multiPrice": 1,
+            "isMaterial": 0,
+            "isMainMaterial": 0,
+            "sort": 0,
+            "isCompleted": false,
+            "dpmCount": 0,
+            "merchandiser": null,
+            "avatar": null,
+            "customerName": null,
+            "customerNo": null,
+            "categoryId": 300276,
+            "cId": "C00041",
+            "name": "双层风衣裤无绳.",
+            "size": [
+                "均码"
+            ],
+            "color": [
+                "杂色"
+            ],
+            "imageUrl": "",
+            "colorImages": {
+                "杂色": ""
+            },
+            "machine": "19543",
+            "buildTime": 1772698905000,
+            "cutters": [
+                "xKIbhYmGtnwLA5A61O0HCzMVe0eN7iqT"
+            ],
+            "remark": ""
+        },
+        {
+            "id": "jEjNGWV",
+            "oId": "99678-2",
+            "purchaseNo": "",
+            "orderTime": 1772698857000,
+            "delivery": 1772640000000,
+            "quota": null,
+            "quantities": {
+                "杂色": {
+                    "均码": 1
+                }
+            },
+            "product": {
+                "杂色": {
+                    "均码": 1
+                }
+            },
+            "orderQuantity": 0,
+            "totalQuantity": 1,
+            "productQuantity": 1,
+            "customName": "",
+            "process": 0,
+            "isLock": false,
+            "isOutsource": 0,
+            "isOutTicket": false,
+            "multiMachine": false,
+            "multiPrice": 1,
+            "isMaterial": 0,
+            "isMainMaterial": 0,
+            "sort": 0,
+            "isCompleted": false,
+            "dpmCount": 0,
+            "merchandiser": null,
+            "avatar": null,
+            "customerName": null,
+            "customerNo": null,
+            "categoryId": 605006,
+            "cId": "C00144",
+            "name": "双层风衣无松紧 （默认）.有松紧也同价.",
+            "size": [
+                "均码"
+            ],
+            "color": [
+                "杂色"
+            ],
+            "imageUrl": "",
+            "colorImages": {
+                "杂色": ""
+            },
+            "machine": "19542",
+            "buildTime": 1772698883000,
+            "cutters": [
+                "xKIbhYmGtnwLA5A61O0HCzMVe0eN7iqT"
+            ],
+            "remark": ""
+        },
+        {
+            "id": "2EOWRQJ",
+            "oId": "99678-1",
+            "purchaseNo": "",
+            "orderTime": 1772698828000,
+            "delivery": 1772640000000,
+            "quota": null,
+            "quantities": {
+                "杂色": {
+                    "均码": 1
+                }
+            },
+            "product": {
+                "杂色": {
+                    "均码": 1
+                }
+            },
+            "orderQuantity": 0,
+            "totalQuantity": 1,
+            "productQuantity": 1,
+            "customName": "",
+            "process": 0,
+            "isLock": false,
+            "isOutsource": 0,
+            "isOutTicket": false,
+            "multiMachine": false,
+            "multiPrice": 1,
+            "isMaterial": 0,
+            "isMainMaterial": 0,
+            "sort": 0,
+            "isCompleted": false,
+            "dpmCount": 0,
+            "merchandiser": null,
+            "avatar": null,
+            "customerName": null,
+            "customerNo": null,
+            "categoryId": 299141,
+            "cId": "001",
+            "name": "圆领短袖，五分袖.",
+            "size": [
+                "均码"
+            ],
+            "color": [
+                "杂色"
+            ],
+            "imageUrl": "",
+            "colorImages": {
+                "杂色": ""
+            },
+            "machine": "19541",
+            "buildTime": 1772698848000,
+            "cutters": [
+                "xKIbhYmGtnwLA5A61O0HCzMVe0eN7iqT"
+            ],
+            "remark": ""
+        }
+    ],
+    "message": 0,
+    "code": 200,
+    "pageItem": 0
+}

@@ -1,0 +1,119 @@
+{
+    "data": [
+        {
+            "id": "LdyDPZ7",
+            "oId": "99641-2",
+            "purchaseNo": "",
+            "orderTime": 1772675198000,
+            "delivery": 1772640000000,
+            "quota": null,
+            "quantities": {
+                "杂色": {
+                    "均码": 2
+                }
+            },
+            "product": {
+                "杂色": {
+                    "均码": 2
+                }
+            },
+            "orderQuantity": 0,
+            "totalQuantity": 2,
+            "productQuantity": 2,
+            "customName": "",
+            "process": 0.625,
+            "isLock": false,
+            "isOutsource": 0,
+            "isOutTicket": false,
+            "multiMachine": false,
+            "multiPrice": 1,
+            "isMaterial": 0,
+            "isMainMaterial": 0,
+            "sort": 0,
+            "isCompleted": false,
+            "dpmCount": 0,
+            "merchandiser": null,
+            "avatar": null,
+            "customerName": null,
+            "customerNo": null,
+            "categoryId": 301298,
+            "cId": "C00047",
+            "name": "短裤  穿绳.",
+            "size": [
+                "均码"
+            ],
+            "color": [
+                "杂色"
+            ],
+            "imageUrl": "",
+            "colorImages": {
+                "杂色": ""
+            },
+            "machine": "19509",
+            "buildTime": 1772675207000,
+            "cutters": [
+                "xKIbhYmGtnwLA5A61O0HCzMVe0eN7iqT"
+            ],
+            "remark": ""
+        },
+        {
+            "id": "Ndk71yV",
+            "oId": "99641-1",
+            "purchaseNo": "",
+            "orderTime": 1772675179000,
+            "delivery": 1772640000000,
+            "quota": null,
+            "quantities": {
+                "杂色": {
+                    "均码": 4
+                }
+            },
+            "product": {
+                "杂色": {
+                    "均码": 4
+                }
+            },
+            "orderQuantity": 0,
+            "totalQuantity": 4,
+            "productQuantity": 4,
+            "customName": "",
+            "process": 0.375,
+            "isLock": false,
+            "isOutsource": 0,
+            "isOutTicket": false,
+            "multiMachine": false,
+            "multiPrice": 1,
+            "isMaterial": 0,
+            "isMainMaterial": 0,
+            "sort": 0,
+            "isCompleted": false,
+            "dpmCount": 0,
+            "merchandiser": null,
+            "avatar": null,
+            "customerName": null,
+            "customerNo": null,
+            "categoryId": 300229,
+            "cId": "C00008",
+            "name": "圆领 背心.袖夹.默认.",
+            "size": [
+                "均码"
+            ],
+            "color": [
+                "杂色"
+            ],
+            "imageUrl": "",
+            "colorImages": {
+                "杂色": ""
+            },
+            "machine": "19508",
+            "buildTime": 1772675191000,
+            "cutters": [
+                "xKIbhYmGtnwLA5A61O0HCzMVe0eN7iqT"
+            ],
+            "remark": ""
+        }
+    ],
+    "message": 0,
+    "code": 200,
+    "pageItem": 0
+}

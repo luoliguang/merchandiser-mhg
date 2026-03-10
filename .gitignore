@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pkl
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+build/
+*.spec
+
+# Secrets
+.env
+.env.*
+auth_config.json
+
+# Excel outputs
+orders_*.xlsx
+orders_result_*.xlsx
+
+# Editor
+.vscode/
+.idea/

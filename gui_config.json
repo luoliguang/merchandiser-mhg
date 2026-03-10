@@ -1,0 +1,16 @@
+{
+  "language": "zh",
+  "theme": "dark",
+  "order_input_excel": "D:/Data/Data/GitHub/mianhuaguo/data/order_result_3.10.xlsx",
+  "order_output_excel": "D:\\Data\\Data\\GitHub\\mianhuaguo\\data\\orders_result_3.10_gui.xlsx",
+  "wechat_excel": "D:/Data/Data/GitHub/mianhuaguo/data/群聊_单号群_3.10.xlsx",
+  "orders_excel": "D:/Data/Data/GitHub/mianhuaguo/data/orders_result_3.10_gui.xlsx",
+  "wechat_log": "D:\\Data\\Data\\GitHub\\mianhuaguo\\data\\wechat_shipment_log.xlsx",
+  "reconcile_output": "D:\\Data\\Data\\GitHub\\mianhuaguo\\data\\reconcile_result_gui_3.10.xlsx",
+  "cookie": "",
+  "start_date": "2024-01-01",
+  "end_date": "2026-12-31",
+  "request_delay": "1.0",
+  "reconcile_auto": false,
+  "order_enable_wechat_compare": false
+}

@@ -1,0 +1,152 @@
+{
+    "data": [
+        {
+            "sid": 169248730,
+            "name": "打边",
+            "price": 0.9,
+            "isRecord": 0,
+            "recordQuantity": null,
+            "sort": 1,
+            "isOpen": 1,
+            "totalQuantity": 100,
+            "complete": {
+                "quantity": {
+                    "杂色": {
+                        "均码": 100
+                    }
+                },
+                "totalQuantity": 100
+            },
+            "completeAmount": 100,
+            "progress": 1
+        },
+        {
+            "sid": 169248731,
+            "name": "平车",
+            "price": 0.6,
+            "isRecord": 0,
+            "recordQuantity": null,
+            "sort": 2,
+            "isOpen": 1,
+            "totalQuantity": 100,
+            "complete": {
+                "quantity": {
+                    "杂色": {
+                        "均码": 100
+                    }
+                },
+                "totalQuantity": 100
+            },
+            "completeAmount": 100,
+            "progress": 1
+        },
+        {
+            "sid": 169248732,
+            "name": "冚车",
+            "price": 0.32,
+            "isRecord": 0,
+            "recordQuantity": null,
+            "sort": 3,
+            "isOpen": 1,
+            "totalQuantity": 100,
+            "complete": {
+                "quantity": {
+                    "杂色": {
+                        "均码": 100
+                    }
+                },
+                "totalQuantity": 100
+            },
+            "completeAmount": 100,
+            "progress": 1
+        },
+        {
+            "sid": 169248733,
+            "name": "剪线",
+            "price": 0.2,
+            "isRecord": 0,
+            "recordQuantity": null,
+            "sort": 4,
+            "isOpen": 1,
+            "totalQuantity": 100,
+            "complete": {
+                "quantity": {
+                    "杂色": {
+                        "均码": 100
+                    }
+                },
+                "totalQuantity": 100
+            },
+            "completeAmount": 100,
+            "progress": 1
+        },
+        {
+            "sid": 169248734,
+            "name": "烫床",
+            "price": 0.14,
+            "isRecord": 0,
+            "recordQuantity": null,
+            "sort": 5,
+            "isOpen": 1,
+            "totalQuantity": 100,
+            "complete": {
+                "quantity": {
+                    "杂色": {
+                        "均码": 100
+                    }
+                },
+                "totalQuantity": 100
+            },
+            "completeAmount": 100,
+            "progress": 1
+        },
+        {
+            "sid": 169248735,
+            "name": "滚筒",
+            "price": 0.01,
+            "isRecord": 0,
+            "recordQuantity": null,
+            "sort": 6,
+            "isOpen": 1,
+            "totalQuantity": 100,
+            "complete": null,
+            "completeAmount": 0,
+            "progress": 0
+        },
+        {
+            "sid": 169248736,
+            "name": "美工",
+            "price": 0.01,
+            "isRecord": 0,
+            "recordQuantity": null,
+            "sort": 7,
+            "isOpen": 1,
+            "totalQuantity": 100,
+            "complete": null,
+            "completeAmount": 0,
+            "progress": 0
+        },
+        {
+            "sid": 169248737,
+            "name": "打包",
+            "price": 0.12,
+            "isRecord": 0,
+            "recordQuantity": null,
+            "sort": 8,
+            "isOpen": 1,
+            "totalQuantity": 100,
+            "complete": {
+                "quantity": {
+                    "杂色": {
+                        "均码": 100
+                    }
+                },
+                "totalQuantity": 100
+            },
+            "completeAmount": 100,
+            "progress": 1
+        }
+    ],
+    "message": "",
+    "code": 200
+}
