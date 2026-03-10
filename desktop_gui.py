@@ -240,6 +240,7 @@ class MainWindow(QMainWindow):
 
     def build_sidebar(self) -> QWidget:
         w = QWidget()
+        w.setObjectName("Sidebar")
         w.setFixedWidth(222)
         lay = QVBoxLayout(w)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -247,7 +248,7 @@ class MainWindow(QMainWindow):
 
         logo = QWidget()
         logo_l = QVBoxLayout(logo)
-        logo_l.setContentsMargins(16, 18, 16, 18)
+        logo_l.setContentsMargins(16, 16, 16, 16)
         self.logo_main = QLabel("MHG DESK")
         self.logo_sub = QLabel("ORDER STATION")
         logo_l.addWidget(self.logo_main)
@@ -288,8 +289,8 @@ class MainWindow(QMainWindow):
 
         content = QWidget()
         content_l = QVBoxLayout(content)
-        content_l.setContentsMargins(24, 18, 24, 20)
-        content_l.setSpacing(14)
+        content_l.setContentsMargins(16, 16, 16, 16)
+        content_l.setSpacing(12)
 
         self.pages = [self.build_order_page(), self.build_wechat_page(), self.build_settings_page()]
         for p in self.pages:
@@ -306,8 +307,8 @@ class MainWindow(QMainWindow):
         w.setObjectName("TopStatusBar")
         w.setFixedHeight(58)
         lay = QHBoxLayout(w)
-        lay.setContentsMargins(18, 0, 18, 0)
-        lay.setSpacing(14)
+        lay.setContentsMargins(16, 0, 16, 0)
+        lay.setSpacing(12)
 
         self.lbl_total_name = QLabel("总任务")
         self.lbl_ok_name = QLabel("成功")
@@ -317,9 +318,12 @@ class MainWindow(QMainWindow):
         self.lbl_fail = QLabel("0")
 
         for v in (self.lbl_total, self.lbl_ok, self.lbl_fail):
-            v.setStyleSheet("font-family:'Consolas'; font-size:20px; font-weight:700; color:#d8e2f7;")
+            v.setStyleSheet("font-family:'Consolas'; font-size:20px; font-weight:700; color:#E6EDF3;")
             v.setMinimumWidth(28)
             v.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+        for name_label in (self.lbl_total_name, self.lbl_ok_name, self.lbl_fail_name):
+            name_label.setStyleSheet("color:#7D8590;")
 
         for name_label, val in ((self.lbl_total_name, self.lbl_total), (self.lbl_ok_name, self.lbl_ok), (self.lbl_fail_name, self.lbl_fail)):
             holder = QWidget()
@@ -361,19 +365,25 @@ class MainWindow(QMainWindow):
         p = QWidget()
         l = QVBoxLayout(p)
         l.setSpacing(12)
+        l.setContentsMargins(0, 0, 0, 0)
+
+        p.setObjectName("PageFrame")
+        p.setStyleSheet("#PageFrame { background:#1C2128; border:1px solid #21262D; border-radius:6px; }")
 
         cfg = QFrame()
         grid = QGridLayout(cfg)
-        grid.setContentsMargins(14, 14, 14, 12)
-        grid.setHorizontalSpacing(10)
-        grid.setVerticalSpacing(10)
+        grid.setContentsMargins(16, 16, 16, 16)
+        grid.setHorizontalSpacing(12)
+        grid.setVerticalSpacing(12)
         grid.setColumnStretch(1, 1)
         self.order_section_title = QLabel()
+        self.order_section_title.setObjectName("PanelHeader")
 
         self.order_input_label = QLabel()
         self.order_input_edit = QLineEdit()
         self.order_input_edit.setMinimumHeight(34)
         self.btn_order_input_browse = QPushButton()
+        self.btn_order_input_browse.setObjectName("BrowseButton")
         self.btn_order_input_browse.setFixedWidth(98)
         self.btn_order_input_browse.setMinimumHeight(34)
         self.btn_order_input_browse.clicked.connect(lambda: self.pick_file(self.order_input_edit))
@@ -382,6 +392,7 @@ class MainWindow(QMainWindow):
         self.order_output_edit = QLineEdit()
         self.order_output_edit.setMinimumHeight(34)
         self.btn_order_output_browse = QPushButton()
+        self.btn_order_output_browse.setObjectName("BrowseButton")
         self.btn_order_output_browse.setFixedWidth(98)
         self.btn_order_output_browse.setMinimumHeight(34)
         self.btn_order_output_browse.clicked.connect(lambda: self.pick_save_file(self.order_output_edit))
@@ -402,8 +413,9 @@ class MainWindow(QMainWindow):
         grid.addWidget(self.order_wechat_file_hint, 3, 2)
 
         row = QHBoxLayout()
-        row.setSpacing(10)
+        row.setSpacing(12)
         self.btn_run_order = QPushButton()
+        self.btn_run_order.setObjectName("PrimaryButton")
         self.btn_run_order.setMinimumHeight(36)
         self.btn_run_order.clicked.connect(self.run_order_query)
         self.btn_open_order_output = QPushButton()
@@ -419,26 +431,39 @@ class MainWindow(QMainWindow):
     def build_wechat_page(self) -> QWidget:
         p = QWidget()
         l = QVBoxLayout(p)
+        l.setContentsMargins(0, 0, 0, 0)
+        l.setSpacing(12)
+
+        p.setObjectName("PageFrame")
+        p.setStyleSheet("#PageFrame { background:#1C2128; border:1px solid #30363D; border-radius:6px; }")
+
         grid = QGridLayout()
+        grid.setHorizontalSpacing(12)
+        grid.setVerticalSpacing(12)
+        grid.setContentsMargins(16, 16, 16, 16)
 
         self.wechat_input_label = QLabel()
         self.wechat_input_edit = QLineEdit()
         self.btn_wechat_browse = QPushButton()
+        self.btn_wechat_browse.setObjectName("BrowseButton")
         self.btn_wechat_browse.clicked.connect(lambda: self.pick_file(self.wechat_input_edit))
 
         self.orders_input_label = QLabel()
         self.orders_input_edit = QLineEdit()
         self.btn_orders_browse = QPushButton()
+        self.btn_orders_browse.setObjectName("BrowseButton")
         self.btn_orders_browse.clicked.connect(lambda: self.pick_file(self.orders_input_edit))
 
         self.wechat_log_label = QLabel()
         self.wechat_log_edit = QLineEdit()
         self.btn_log_browse = QPushButton()
+        self.btn_log_browse.setObjectName("BrowseButton")
         self.btn_log_browse.clicked.connect(lambda: self.pick_save_file(self.wechat_log_edit))
 
         self.reconcile_out_label = QLabel()
         self.reconcile_out_edit = QLineEdit()
         self.btn_reconcile_out_browse = QPushButton()
+        self.btn_reconcile_out_browse.setObjectName("BrowseButton")
         self.btn_reconcile_out_browse.clicked.connect(lambda: self.pick_save_file(self.reconcile_out_edit))
 
         self.chk_auto_mode = QCheckBox()
@@ -470,6 +495,12 @@ class MainWindow(QMainWindow):
     def build_settings_page(self) -> QWidget:
         p = QWidget()
         form = QFormLayout(p)
+        form.setContentsMargins(16, 16, 16, 16)
+        form.setHorizontalSpacing(12)
+        form.setVerticalSpacing(12)
+
+        p.setObjectName("PageFrame")
+        p.setStyleSheet("#PageFrame { background:#1C2128; border:1px solid #30363D; border-radius:6px; }")
         self.settings_cookie_label = QLabel()
         self.settings_cookie_edit = QLineEdit()
         self.settings_start_label = QLabel()
@@ -490,11 +521,11 @@ class MainWindow(QMainWindow):
 
     def build_bottom_panels(self):
         row = QHBoxLayout()
-        row.setSpacing(10)
+        row.setSpacing(12)
         self.log_panel = QFrame()
         ll = QVBoxLayout(self.log_panel)
-        ll.setContentsMargins(12, 10, 12, 10)
-        ll.setSpacing(8)
+        ll.setContentsMargins(16, 16, 16, 16)
+        ll.setSpacing(12)
         self.log_header = QLabel()
         self.log_header.setObjectName("PanelHeader")
         self.log_text = QTextEdit()
@@ -505,8 +536,8 @@ class MainWindow(QMainWindow):
         self.history_panel = QFrame()
         self.history_panel.setFixedWidth(300)
         hl = QVBoxLayout(self.history_panel)
-        hl.setContentsMargins(10, 10, 10, 10)
-        hl.setSpacing(8)
+        hl.setContentsMargins(16, 16, 16, 16)
+        hl.setSpacing(12)
         self.history_header = QLabel()
         self.history_header.setObjectName("PanelHeader")
         self.history_text = QTextEdit()
@@ -616,26 +647,31 @@ class MainWindow(QMainWindow):
 
         if dark:
             style = """
-            QMainWindow, QWidget { background:#0f121a; color:#c8d0e8; font-family:'Segoe UI','Microsoft YaHei'; font-size:12px; }
-            #TitleBar { background:#101521; border-bottom:1px solid #243047; }
-            QLabel { color:#9fb0d0; }
-            #PanelHeader { color:#d6def2; font-weight:600; letter-spacing:0.5px; }
-            QFrame { background:#151c2c; border:1px solid #273453; border-radius:8px; }
-            QLineEdit, QComboBox, QTextEdit { background:#0d111a; border:1px solid #324268; border-radius:6px; padding:6px 8px; color:#d4ddf4; }
+            QMainWindow, QWidget { background:#0D1117; color:#E6EDF3; font-family:'Segoe UI','Microsoft YaHei'; font-size:12px; }
+            #TitleBar { background:#161B22; border-bottom:1px solid #30363D; }
+            #Sidebar { background:#161B22; }
+            QLabel { color:#E6EDF3; }
+            #PanelHeader { color:#7D8590; font-weight:700; font-size:11px; letter-spacing:0.2px; }
+            QFrame { background:#1C2128; border:1px solid #21262D; border-radius:6px; }
+            QLineEdit, QComboBox, QTextEdit { background:#0D1117; border:1px solid #21262D; border-radius:6px; padding:6px 8px; color:#E6EDF3; }
             QTextEdit { line-height: 1.45; }
             QLineEdit { min-height: 22px; }
-            QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border:1px solid #4b79d8; }
-            QPushButton { background:#1b2438; border:1px solid #324268; border-radius:6px; color:#cfd9f0; padding:6px 10px; }
-            QPushButton:hover { background:#22304a; }
-            QPushButton:checked { border-left:2px solid #4b79d8; background:#1a2942; }
-            #TopStatusBar { background:#121a2a; border-top:1px solid #25314e; border-bottom:1px solid #25314e; }
-            #TopStatusBar QPushButton { background:#182136; border:1px solid #314163; border-radius:5px; padding:5px 9px; }
-            #TopStatusBar QPushButton:hover { background:#1d2840; }
-            #TopStatusBar QLabel { color:#9fb0d0; }
-            QProgressBar { background:#2a3550; border:none; border-radius:2px; }
-            QProgressBar::chunk { background:#4b79d8; border-radius:2px; }
-            QScrollBar:vertical { background:#151c2c; width:5px; }
-            QScrollBar::handle:vertical { background:#334468; }
+            QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border:1px solid #2F81F7; }
+            QPushButton { background:#1C2128; border:1px solid #21262D; border-radius:6px; color:#E6EDF3; padding:6px 10px; font-weight:400; }
+            QPushButton:hover { background:#22262E; }
+            QPushButton:checked { border-left:3px solid #2F81F7; background: rgba(47,129,247,0.1); }
+            #PrimaryButton { background:rgba(31,111,235,0.12); border:1px solid #1F6FEB; color:#4D9EF8; }
+            #PrimaryButton:hover { background:rgba(31,111,235,0.18); }
+            #BrowseButton { background:transparent; border:1px solid #30363D; color:#7D8590; border-radius:6px; padding:4px 12px; }
+            #BrowseButton:hover { background:rgba(255,255,255,0.04); }
+            #TopStatusBar { background:#161B22; border-top:1px solid #21262D; border-bottom:1px solid #21262D; }
+            #TopStatusBar QPushButton { background:#1C2128; border:1px solid #21262D; border-radius:6px; padding:5px 9px; }
+            #TopStatusBar QPushButton:hover { background:#22262E; }
+            #TopStatusBar QLabel { color:#7D8590; }
+            QProgressBar { background:#21262D; border:none; border-radius:2px; }
+            QProgressBar::chunk { background:#2F81F7; border-radius:2px; }
+            QScrollBar:vertical { background:#0D1117; width:5px; }
+            QScrollBar::handle:vertical { background:#21262D; }
             """
         else:
             style = """
