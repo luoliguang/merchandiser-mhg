@@ -31,6 +31,9 @@ auth_config.json
 orders_*.xlsx
 orders_result_*.xlsx
 
+# Data files (do not upload to GitHub)
+data/
+
 # Editor
 .vscode/
 .idea/

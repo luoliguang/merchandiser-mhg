@@ -23,11 +23,14 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-from datetime import datetime
+import zipfile
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
 import pandas as pd
+from docx import Document
+from docx.opc.exceptions import PackageNotFoundError
 
 
 def init_console_encoding():
@@ -42,6 +45,11 @@ def init_console_encoding():
 
 
 ORDER_PATTERN = re.compile(r"\d{4,}(?:-\d+)*")
+DOCX_ORDER_PATTERN = re.compile(r"(?<!\d)[1-9]\d{4,7}(?:-\d{1,3}){0,3}(?!\d)")
+DOCX_TIME_PATTERN = re.compile(
+    r"(?:(昨天)\s*)?(\d{1,2})月(\d{1,2})日(?:星期[一二三四五六日])?\s*(\d{1,2}):(\d{2})"
+)
+DOCX_SIMPLE_TIME_PATTERN = re.compile(r"(昨天)\s*(\d{1,2}):(\d{2})")
 
 
 def extract_base_order(order_no: str) -> str:
@@ -78,6 +86,108 @@ def extract_orders_from_content(content: str) -> list[str]:
             seen.add(m)
             result.append(m)
     return result
+
+
+def is_docx_file(path: Path) -> bool:
+    return path.suffix.lower() == ".docx"
+
+
+def iter_docx_lines(doc_path: Path):
+    if not zipfile.is_zipfile(doc_path):
+        raise ValueError(
+            f"文件不是有效的 DOCX（zip 容器）: {doc_path}\n"
+            "请确认文件后缀为 .docx，且不是 .doc 或已损坏文件。"
+        )
+    try:
+        doc = Document(str(doc_path))
+    except PackageNotFoundError as exc:
+        raise FileNotFoundError(f"无法打开 DOCX 文件: {doc_path}") from exc
+
+    for para in doc.paragraphs:
+        text = (para.text or "").strip()
+        if text:
+            yield text
+
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                text = (cell.text or "").strip()
+                if text:
+                    yield text
+
+
+def extract_orders_from_docx(doc_path: Path) -> pd.DataFrame:
+    lines = list(iter_docx_lines(doc_path))
+    rows = []
+    last_time_text = ""
+
+    for raw in lines:
+        text = normalize_text(raw)
+        if not text:
+            continue
+
+        last_time_text = parse_docx_time_text(text, last_time_text)
+
+        matches = DOCX_ORDER_PATTERN.findall(text)
+        if not matches:
+            continue
+
+        for order_no in matches:
+            rows.append(
+                {
+                    "chat_time": last_time_text,
+                    "content": text,
+                    "order_no": order_no,
+                }
+            )
+
+    if not rows:
+        return pd.DataFrame(columns=["chat_time", "content", "order_no", "base_order_no", "source_file", "import_time"])
+
+    df = pd.DataFrame(rows)
+    df["base_order_no"] = df["order_no"].map(extract_base_order)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    df["source_file"] = str(doc_path.name)
+    df["import_time"] = now
+    df["chat_time"] = df["chat_time"].map(normalize_text)
+    df["content"] = df["content"].map(normalize_text)
+    return df[["chat_time", "content", "order_no", "base_order_no", "source_file", "import_time"]]
+
+
+def parse_docx_time_text(text: str, last_time: str) -> str:
+    normalized = text.replace("：", ":")
+    m = DOCX_TIME_PATTERN.search(normalized)
+    if m:
+        is_yesterday, month, day, hour, minute = m.groups()
+        dt = build_docx_datetime(is_yesterday, month, day, hour, minute)
+        return dt.strftime("%Y-%m-%d %H:%M:%S") if dt else last_time
+
+    m2 = DOCX_SIMPLE_TIME_PATTERN.search(normalized)
+    if m2:
+        is_yesterday, hour, minute = m2.groups()
+        dt = build_docx_datetime(is_yesterday, None, None, hour, minute)
+        return dt.strftime("%Y-%m-%d %H:%M:%S") if dt else last_time
+
+    return last_time
+
+
+def build_docx_datetime(is_yesterday: str | None, month: str | None, day: str | None, hour: str, minute: str):
+    now = datetime.now()
+    target_date = now.date()
+
+    if month and day:
+        try:
+            target_date = datetime(now.year, int(month), int(day)).date()
+        except ValueError:
+            target_date = now.date()
+    if is_yesterday:
+        target_date = (datetime.combine(target_date, datetime.min.time()) - timedelta(days=1)).date()
+
+    try:
+        dt = datetime.combine(target_date, datetime.min.time()).replace(hour=int(hour), minute=int(minute))
+    except ValueError:
+        return None
+    return dt
 
 
 def load_wechat_orders(wechat_xlsx: Path) -> pd.DataFrame:
@@ -118,6 +228,12 @@ def load_wechat_orders(wechat_xlsx: Path) -> pd.DataFrame:
     df["import_time"] = now
 
     return df[["chat_time", "content", "order_no", "base_order_no", "source_file", "import_time"]]
+
+
+def load_input_orders(input_path: Path, source_type: str) -> pd.DataFrame:
+    if source_type == "docx":
+        return extract_orders_from_docx(input_path)
+    return load_wechat_orders(input_path)
 
 
 def build_clean_orders(raw_imports: pd.DataFrame) -> pd.DataFrame:
@@ -325,6 +441,26 @@ def find_latest_xlsx_by_keywords(data_dir: Path, keywords: list[str]) -> Optiona
     return best
 
 
+def find_latest_docx_by_keywords(data_dir: Path, keywords: list[str]) -> Optional[Path]:
+    if not data_dir.exists():
+        return None
+
+    files = [p for p in data_dir.glob("*.docx") if p.is_file()]
+    if not files:
+        return None
+
+    def score(p: Path):
+        name = p.name.lower()
+        hit = sum(1 for k in keywords if k in name)
+        return (hit, p.stat().st_mtime)
+
+    files.sort(key=score, reverse=True)
+    best = files[0]
+    if score(best)[0] <= 0:
+        return None
+    return best
+
+
 def prompt_path(label: str, default_path: Path) -> Path:
     text = input(f"{label}（回车使用默认）\n> {default_path}\n> ").strip()
     if not text:
@@ -353,7 +489,21 @@ def parse_args():
         action="store_true",
         help="禁用交互输入，路径缺失时直接报错",
     )
+    parser.add_argument(
+        "--source",
+        choices=["auto", "wechat", "docx"],
+        default="auto",
+        help="输入来源类型（自动识别/微信导出/docx）",
+    )
     return parser.parse_args()
+
+
+def detect_input_source(path: Path) -> str:
+    if path.suffix.lower() == ".docx":
+        return "docx"
+    if path.suffix.lower() in {".xlsx", ".xlsm"}:
+        return "wechat"
+    return "wechat"
 
 
 def main():
@@ -365,9 +515,10 @@ def main():
 
     data_dir = Path("data")
     auto_wechat = find_latest_xlsx_by_keywords(data_dir, ["群聊", "单号", "wechat"])
+    auto_docx = find_latest_docx_by_keywords(data_dir, ["docx", "微信", "聊天", "导出"])
     auto_orders = find_latest_xlsx_by_keywords(data_dir, ["orders_result", "orders", "result", "核对", "订单"])
 
-    wechat_path = Path(args.wechat) if args.wechat else auto_wechat
+    input_path = Path(args.wechat) if args.wechat else (auto_wechat or auto_docx)
     orders_path = Path(args.orders) if args.orders else auto_orders
 
     should_prompt = (not args.auto) and (not args.no_interactive) and (
@@ -376,24 +527,31 @@ def main():
 
     if should_prompt:
         print("\n[INFO] 微信单号核对（简化输入）")
-        if wechat_path is None:
-            wechat_path = Path("data/群聊_单号群.xlsx")
+        if input_path is None:
+            input_path = Path("data/群聊_单号群.xlsx")
         if orders_path is None:
             orders_path = Path("data/orders_result.xlsx")
 
-        wechat_path = prompt_path("微信导出xlsx路径", wechat_path)
+        input_path = prompt_path("微信导出xlsx路径/Docx路径", input_path)
         orders_path = prompt_path("订单结果xlsx路径", orders_path)
 
-    if wechat_path is None or not Path(wechat_path).exists():
-        raise FileNotFoundError(f"微信文件不存在: {wechat_path}")
+    if input_path is None or not Path(input_path).exists():
+        raise FileNotFoundError(f"微信/Docx 文件不存在: {input_path}")
     if orders_path is None or not Path(orders_path).exists():
         raise FileNotFoundError(f"订单文件不存在: {orders_path}")
 
-    wechat_path = Path(wechat_path)
+    input_path = Path(input_path)
     orders_path = Path(orders_path)
 
-    print(f"[STEP 1/4] 读取微信导出: {wechat_path}")
-    wechat_new = load_wechat_orders(wechat_path)
+    if args.source == "auto":
+        source_type = detect_input_source(input_path)
+    else:
+        source_type = args.source
+
+    source_label = "DOCX" if source_type == "docx" else "微信导出"
+
+    print(f"[STEP 1/4] 读取{source_label}: {input_path}")
+    wechat_new = load_input_orders(input_path, source_type)
     print(f"[INFO] 提取到有效单号 {len(wechat_new)} 条")
 
     print(f"[STEP 2/4] 追加到微信汇总库: {log_path}")

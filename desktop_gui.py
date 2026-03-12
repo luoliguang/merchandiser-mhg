@@ -52,6 +52,7 @@ I18N = {
         "run_order": "运行订单查询",
         "run_reconcile": "运行微信核对",
         "auto_mode": "自动模式",
+        "wechat_source": "数据来源",
         "cookie": "Cookie",
         "start_date": "开始日期",
         "end_date": "结束日期",
@@ -89,6 +90,7 @@ I18N = {
         "run_order": "Run Order Query",
         "run_reconcile": "Run WeChat Reconcile",
         "auto_mode": "Auto Mode",
+        "wechat_source": "Source Type",
         "cookie": "Cookie",
         "start_date": "Start Date",
         "end_date": "End Date",
@@ -119,6 +121,7 @@ DEFAULT_CONFIG = {
     "order_input_excel": str(APP_DIR / "dist" / "orders_20260305_212724.xlsx"),
     "order_output_excel": str(APP_DIR / "data" / "orders_result_gui.xlsx"),
     "wechat_excel": str(APP_DIR / "data" / "群聊_单号群.xlsx"),
+    "wechat_source": "auto",
     "orders_excel": str(APP_DIR / "data" / "orders_result.xlsx"),
     "wechat_log": str(APP_DIR / "data" / "wechat_shipment_log.xlsx"),
     "reconcile_output": str(APP_DIR / "data" / "reconcile_result_gui.xlsx"),
@@ -444,9 +447,14 @@ class MainWindow(QMainWindow):
 
         self.wechat_input_label = QLabel()
         self.wechat_input_edit = QLineEdit()
+        self.wechat_source_label = QLabel()
+        self.wechat_source_combo = QComboBox()
+        self.wechat_source_combo.addItems(["自动识别", "微信导出", "DOCX提取"])
+        self.wechat_source_combo.setFixedWidth(120)
+        self.wechat_source_combo.currentIndexChanged.connect(self.on_wechat_source_changed)
         self.btn_wechat_browse = QPushButton()
         self.btn_wechat_browse.setObjectName("BrowseButton")
-        self.btn_wechat_browse.clicked.connect(lambda: self.pick_file(self.wechat_input_edit))
+        self.btn_wechat_browse.clicked.connect(lambda: self.pick_wechat_file())
 
         self.orders_input_label = QLabel()
         self.orders_input_edit = QLineEdit()
@@ -475,13 +483,15 @@ class MainWindow(QMainWindow):
         row = 0
         for lab, edit, btn in (
             (self.wechat_input_label, self.wechat_input_edit, self.btn_wechat_browse),
+            (self.wechat_source_label, self.wechat_source_combo, None),
             (self.orders_input_label, self.orders_input_edit, self.btn_orders_browse),
             (self.wechat_log_label, self.wechat_log_edit, self.btn_log_browse),
             (self.reconcile_out_label, self.reconcile_out_edit, self.btn_reconcile_out_browse),
         ):
             grid.addWidget(lab, row, 0)
             grid.addWidget(edit, row, 1)
-            grid.addWidget(btn, row, 2)
+            if btn is not None:
+                grid.addWidget(btn, row, 2)
             row += 1
 
         grid.addWidget(self.chk_auto_mode, row, 1)
@@ -581,6 +591,7 @@ class MainWindow(QMainWindow):
         self.chk_order_wechat_compare.setText(self.t("enable_wechat_compare"))
 
         self.wechat_input_label.setText(self.t("wechat_excel"))
+        self.wechat_source_label.setText(self.t("wechat_source"))
         self.orders_input_label.setText(self.t("orders_excel"))
         self.wechat_log_label.setText(self.t("wechat_log"))
         self.reconcile_out_label.setText(self.t("reconcile_output"))
@@ -616,6 +627,7 @@ class MainWindow(QMainWindow):
         self.order_input_edit.setText(self.config.get("order_input_excel", ""))
         self.order_output_edit.setText(self.config.get("order_output_excel", ""))
         self.wechat_input_edit.setText(self.config.get("wechat_excel", ""))
+        self.apply_wechat_source_combo(self.config.get("wechat_source", "auto"))
         self.orders_input_edit.setText(self.config.get("orders_excel", ""))
         self.wechat_log_edit.setText(self.config.get("wechat_log", ""))
         self.reconcile_out_edit.setText(self.config.get("reconcile_output", ""))
@@ -631,6 +643,7 @@ class MainWindow(QMainWindow):
         self.config["order_input_excel"] = self.order_input_edit.text().strip()
         self.config["order_output_excel"] = self.order_output_edit.text().strip()
         self.config["wechat_excel"] = self.wechat_input_edit.text().strip()
+        self.config["wechat_source"] = self.get_wechat_source_key()
         self.config["orders_excel"] = self.orders_input_edit.text().strip()
         self.config["wechat_log"] = self.wechat_log_edit.text().strip()
         self.config["reconcile_output"] = self.reconcile_out_edit.text().strip()
@@ -641,6 +654,8 @@ class MainWindow(QMainWindow):
         self.config["reconcile_auto"] = self.chk_auto_mode.isChecked()
         self.config["order_enable_wechat_compare"] = self.chk_order_wechat_compare.isChecked()
         self.config["theme"] = "dark" if self.theme_combo.currentIndex() == 0 else "light"
+        if "wechat_source" not in self.config:
+            self.config["wechat_source"] = "auto"
 
     def apply_styles(self):
         dark = self.config.get("theme", "dark") == "dark"
@@ -715,12 +730,51 @@ class MainWindow(QMainWindow):
         else:
             self.order_wechat_file_hint.setText("NO FILE")
 
+    def get_wechat_source_key(self) -> str:
+        idx = self.wechat_source_combo.currentIndex()
+        if idx == 1:
+            return "wechat"
+        if idx == 2:
+            return "docx"
+        return "auto"
+
+    def apply_wechat_source_combo(self, key: str):
+        mapping = {"auto": 0, "wechat": 1, "docx": 2}
+        self.wechat_source_combo.setCurrentIndex(mapping.get(key, 0))
+
+    def auto_detect_wechat_source(self, file_path: str):
+        if not file_path:
+            return
+        suffix = Path(file_path).suffix.lower()
+        if suffix == ".docx":
+            self.apply_wechat_source_combo("docx")
+        elif suffix in {".xlsx", ".xlsm"}:
+            self.apply_wechat_source_combo("wechat")
+
+    def on_wechat_source_changed(self, _idx: int):
+        source = self.get_wechat_source_key()
+        if source != "auto":
+            self.config["wechat_source"] = source
+
     def pick_file(self, target: QLineEdit):
         fp, _ = QFileDialog.getOpenFileName(self, "Select file", str(APP_DIR), "Excel Files (*.xlsx *.xlsm);;All Files (*)")
         if fp:
             target.setText(fp)
             if target is self.wechat_input_edit:
                 self.refresh_order_wechat_file_hint()
+                self.auto_detect_wechat_source(fp)
+
+    def pick_wechat_file(self):
+        fp, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select file",
+            str(APP_DIR),
+            "WeChat Files (*.xlsx *.xlsm *.docx);;All Files (*)",
+        )
+        if fp:
+            self.wechat_input_edit.setText(fp)
+            self.refresh_order_wechat_file_hint()
+            self.auto_detect_wechat_source(fp)
 
     def pick_save_file(self, target: QLineEdit):
         fp, _ = QFileDialog.getSaveFileName(self, "Save file", target.text() or str(APP_DIR / "data"), "Excel Files (*.xlsx)")
@@ -913,6 +967,8 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Script not found: {script}")
             return
         args = [str(script), "--log", self.config["wechat_log"], "--output", self.config["reconcile_output"]]
+        source_key = self.config.get("wechat_source", "auto")
+        args += ["--source", source_key]
         if self.config.get("reconcile_auto"):
             args.append("--auto")
         else:
