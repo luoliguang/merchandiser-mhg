@@ -10,7 +10,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QProcess, Qt, QPoint
+from PySide6.QtCore import QProcess, Qt, QPoint, QEvent, QTimer
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -38,7 +38,7 @@ RUN_HISTORY_PATH = APP_DIR / "run_history.csv"
 
 I18N = {
     "zh": {
-        "title": "棉花果订单工作台",
+        "title": "跟单工作台",
         "order": "订单查询",
         "wechat": "微信核对",
         "settings": "设置",
@@ -76,7 +76,7 @@ I18N = {
         "system": "系统",
     },
     "en": {
-        "title": "MHG Order Station",
+        "title": "Order Station",
         "order": "Order Query",
         "wechat": "WeChat Reconcile",
         "settings": "Settings",
@@ -221,15 +221,19 @@ class MainWindow(QMainWindow):
 
         self.btn_min = QPushButton("—")
         self.btn_min.setFixedWidth(34)
+        self.btn_max = QPushButton("大")
+        self.btn_max.setFixedWidth(34)
         self.btn_close = QPushButton("✕")
         self.btn_close.setFixedWidth(34)
         self.btn_min.clicked.connect(self.showMinimized)
+        self.btn_max.clicked.connect(self.toggle_maximize)
         self.btn_close.clicked.connect(self.close)
 
         # 可拖动标题栏（排除控件区）
         w.mousePressEvent = self._title_mouse_press
         w.mouseMoveEvent = self._title_mouse_move
         w.mouseReleaseEvent = self._title_mouse_release
+        w.mouseDoubleClickEvent = self._title_mouse_double_click
 
         lay.addWidget(self.lang_label)
         lay.addWidget(self.lang_combo)
@@ -238,6 +242,7 @@ class MainWindow(QMainWindow):
         lay.addWidget(self.theme_combo)
         lay.addSpacing(8)
         lay.addWidget(self.btn_min)
+        lay.addWidget(self.btn_max)
         lay.addWidget(self.btn_close)
         return w
 
@@ -252,7 +257,7 @@ class MainWindow(QMainWindow):
         logo = QWidget()
         logo_l = QVBoxLayout(logo)
         logo_l.setContentsMargins(16, 16, 16, 16)
-        self.logo_main = QLabel("MHG DESK")
+        self.logo_main = QLabel("FangDu Order DESK")
         self.logo_sub = QLabel("ORDER STATION")
         logo_l.addWidget(self.logo_main)
         logo_l.addWidget(self.logo_sub)
@@ -385,6 +390,8 @@ class MainWindow(QMainWindow):
         self.order_input_label = QLabel()
         self.order_input_edit = QLineEdit()
         self.order_input_edit.setMinimumHeight(34)
+        self.order_input_edit.setAcceptDrops(True)
+        self.order_input_edit.installEventFilter(self)
         self.btn_order_input_browse = QPushButton()
         self.btn_order_input_browse.setObjectName("BrowseButton")
         self.btn_order_input_browse.setFixedWidth(98)
@@ -447,14 +454,25 @@ class MainWindow(QMainWindow):
 
         self.wechat_input_label = QLabel()
         self.wechat_input_edit = QLineEdit()
+        self.wechat_input_edit.setAcceptDrops(True)
+        self.wechat_input_edit.installEventFilter(self)
         self.wechat_source_label = QLabel()
         self.wechat_source_combo = QComboBox()
         self.wechat_source_combo.addItems(["自动识别", "微信导出", "DOCX提取"])
         self.wechat_source_combo.setFixedWidth(120)
         self.wechat_source_combo.currentIndexChanged.connect(self.on_wechat_source_changed)
+        self.wechat_source_hint = QLabel()
+        self.wechat_source_hint.setObjectName("HintLabel")
         self.btn_wechat_browse = QPushButton()
         self.btn_wechat_browse.setObjectName("BrowseButton")
         self.btn_wechat_browse.clicked.connect(lambda: self.pick_wechat_file())
+        browse_box = QWidget()
+        browse_layout = QHBoxLayout(browse_box)
+        browse_layout.setContentsMargins(0, 0, 0, 0)
+        browse_layout.setSpacing(8)
+        browse_layout.addWidget(self.btn_wechat_browse)
+        browse_layout.addWidget(self.wechat_source_hint)
+        browse_layout.addStretch(1)
 
         self.orders_input_label = QLabel()
         self.orders_input_edit = QLineEdit()
@@ -482,7 +500,7 @@ class MainWindow(QMainWindow):
 
         row = 0
         for lab, edit, btn in (
-            (self.wechat_input_label, self.wechat_input_edit, self.btn_wechat_browse),
+            (self.wechat_input_label, self.wechat_input_edit, browse_box),
             (self.wechat_source_label, self.wechat_source_combo, None),
             (self.orders_input_label, self.orders_input_edit, self.btn_orders_browse),
             (self.wechat_log_label, self.wechat_log_edit, self.btn_log_browse),
@@ -628,6 +646,7 @@ class MainWindow(QMainWindow):
         self.order_output_edit.setText(self.config.get("order_output_excel", ""))
         self.wechat_input_edit.setText(self.config.get("wechat_excel", ""))
         self.apply_wechat_source_combo(self.config.get("wechat_source", "auto"))
+        self.update_wechat_source_hint()
         self.orders_input_edit.setText(self.config.get("orders_excel", ""))
         self.wechat_log_edit.setText(self.config.get("wechat_log", ""))
         self.reconcile_out_edit.setText(self.config.get("reconcile_output", ""))
@@ -638,6 +657,8 @@ class MainWindow(QMainWindow):
         self.chk_auto_mode.setChecked(bool(self.config.get("reconcile_auto", False)))
         self.chk_order_wechat_compare.setChecked(bool(self.config.get("order_enable_wechat_compare", False)))
         self.btn_nav_order.setChecked(True)
+        self.update_max_button_state()
+        QTimer.singleShot(0, self.update_max_button_state)
 
     def collect_ui_to_config(self):
         self.config["order_input_excel"] = self.order_input_edit.text().strip()
@@ -687,6 +708,7 @@ class MainWindow(QMainWindow):
             QProgressBar::chunk { background:#2F81F7; border-radius:2px; }
             QScrollBar:vertical { background:#0D1117; width:5px; }
             QScrollBar::handle:vertical { background:#21262D; }
+            #HintLabel { color:#7D8590; font-size:11px; }
             """
         else:
             style = """
@@ -707,6 +729,7 @@ class MainWindow(QMainWindow):
             QProgressBar::chunk { background:#4b79d8; border-radius:2px; }
             QScrollBar:vertical { background:#f3f5f9; width:5px; }
             QScrollBar::handle:vertical { background:#c5cfe2; }
+            #HintLabel { color:#6a7a95; font-size:11px; }
             """
 
         self.setStyleSheet(style)
@@ -730,6 +753,15 @@ class MainWindow(QMainWindow):
         else:
             self.order_wechat_file_hint.setText("NO FILE")
 
+    def update_wechat_source_hint(self):
+        key = self.get_wechat_source_key()
+        label_map = {
+            "auto": "自动识别",
+            "wechat": "微信导出",
+            "docx": "DOCX提取",
+        }
+        self.wechat_source_hint.setText(f"识别: {label_map.get(key, '自动识别')}")
+
     def get_wechat_source_key(self) -> str:
         idx = self.wechat_source_combo.currentIndex()
         if idx == 1:
@@ -741,6 +773,7 @@ class MainWindow(QMainWindow):
     def apply_wechat_source_combo(self, key: str):
         mapping = {"auto": 0, "wechat": 1, "docx": 2}
         self.wechat_source_combo.setCurrentIndex(mapping.get(key, 0))
+        self.update_wechat_source_hint()
 
     def auto_detect_wechat_source(self, file_path: str):
         if not file_path:
@@ -750,11 +783,14 @@ class MainWindow(QMainWindow):
             self.apply_wechat_source_combo("docx")
         elif suffix in {".xlsx", ".xlsm"}:
             self.apply_wechat_source_combo("wechat")
+        else:
+            self.apply_wechat_source_combo("auto")
 
     def on_wechat_source_changed(self, _idx: int):
         source = self.get_wechat_source_key()
         if source != "auto":
             self.config["wechat_source"] = source
+        self.update_wechat_source_hint()
 
     def pick_file(self, target: QLineEdit):
         fp, _ = QFileDialog.getOpenFileName(self, "Select file", str(APP_DIR), "Excel Files (*.xlsx *.xlsm);;All Files (*)")
@@ -775,6 +811,41 @@ class MainWindow(QMainWindow):
             self.wechat_input_edit.setText(fp)
             self.refresh_order_wechat_file_hint()
             self.auto_detect_wechat_source(fp)
+
+    def handle_wechat_drop(self, file_path: str):
+        if not file_path:
+            return
+        self.wechat_input_edit.setText(file_path)
+        self.refresh_order_wechat_file_hint()
+        self.auto_detect_wechat_source(file_path)
+
+    def handle_order_input_drop(self, file_path: str):
+        if not file_path:
+            return
+        self.order_input_edit.setText(file_path)
+
+    def eventFilter(self, obj, event):
+        wechat_edit = getattr(self, "wechat_input_edit", None)
+        order_edit = getattr(self, "order_input_edit", None)
+        if obj in {wechat_edit, order_edit}:
+            if event.type() == QEvent.Type.DragEnter:
+                if event.mimeData().hasUrls():
+                    urls = event.mimeData().urls()
+                    if urls:
+                        event.acceptProposedAction()
+                        return True
+            if event.type() == QEvent.Type.Drop:
+                if event.mimeData().hasUrls():
+                    urls = event.mimeData().urls()
+                    if urls:
+                        path = urls[0].toLocalFile()
+                        if obj is wechat_edit:
+                            self.handle_wechat_drop(path)
+                        else:
+                            self.handle_order_input_drop(path)
+                        event.acceptProposedAction()
+                        return True
+        return super().eventFilter(obj, event)
 
     def pick_save_file(self, target: QLineEdit):
         fp, _ = QFileDialog.getSaveFileName(self, "Save file", target.text() or str(APP_DIR / "data"), "Excel Files (*.xlsx)")
@@ -1014,6 +1085,48 @@ class MainWindow(QMainWindow):
 
     def _title_mouse_release(self, _event):
         self._drag_pos = None
+
+    def _title_mouse_double_click(self, event):
+        if event.button() == Qt.LeftButton:
+            self.toggle_maximize()
+
+    def schedule_max_state_refresh(self):
+        for delay in (0, 50, 150, 300):
+            QTimer.singleShot(delay, self.update_max_button_state)
+        QTimer.singleShot(300, lambda: self.btn_max.repaint())
+
+    def is_effectively_maximized(self) -> bool:
+        if self.isMaximized():
+            return True
+        screen = self.screen()
+        if screen is None:
+            return False
+        avail = screen.availableGeometry()
+        geo = self.frameGeometry()
+        return abs(geo.width() - avail.width()) <= 2 and abs(geo.height() - avail.height()) <= 2
+
+    def toggle_maximize(self):
+        if self.is_effectively_maximized():
+            self.showNormal()
+        else:
+            self.showMaximized()
+        self.schedule_max_state_refresh()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.schedule_max_state_refresh()
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.Type.WindowStateChange:
+            self.schedule_max_state_refresh()
+        super().changeEvent(event)
+
+    def update_max_button_state(self):
+        is_max = self.is_effectively_maximized()
+        if is_max:
+            self.btn_max.setText("▢")
+        else:
+            self.btn_max.setText("❐")
 
 
 def main():
