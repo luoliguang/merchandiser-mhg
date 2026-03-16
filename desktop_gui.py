@@ -133,6 +133,35 @@ DEFAULT_CONFIG = {
     "order_enable_wechat_compare": False,
 }
 
+DATE_TOKEN = "{date}"
+
+
+def format_today_md() -> str:
+    today = datetime.now()
+    return f"{today.month}.{today.day}"
+
+
+def apply_dynamic_dates(config: dict) -> dict:
+    date_keys = (
+        "order_output_excel",
+        "wechat_excel",
+        "orders_excel",
+        "reconcile_output",
+        "order_input_excel",
+    )
+    today_md = format_today_md()
+
+    for key in date_keys:
+        value = config.get(key)
+        if not isinstance(value, str) or not value:
+            continue
+        if DATE_TOKEN in value:
+            config[key] = value.replace(DATE_TOKEN, today_md)
+            continue
+        config[key] = re.sub(r"_(\d{1,2})\.(\d{1,2})(?=\.|/|$)", f"_{today_md}", value)
+
+    return config
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -180,10 +209,10 @@ class MainWindow(QMainWindow):
                 data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
                 cfg = dict(DEFAULT_CONFIG)
                 cfg.update(data)
-                return cfg
+                return apply_dynamic_dates(cfg)
             except Exception:
                 pass
-        return dict(DEFAULT_CONFIG)
+        return apply_dynamic_dates(dict(DEFAULT_CONFIG))
 
     def save_config(self):
         self.collect_ui_to_config()
@@ -476,6 +505,8 @@ class MainWindow(QMainWindow):
 
         self.orders_input_label = QLabel()
         self.orders_input_edit = QLineEdit()
+        self.orders_input_edit.setAcceptDrops(True)
+        self.orders_input_edit.installEventFilter(self)
         self.btn_orders_browse = QPushButton()
         self.btn_orders_browse.setObjectName("BrowseButton")
         self.btn_orders_browse.clicked.connect(lambda: self.pick_file(self.orders_input_edit))
@@ -824,10 +855,16 @@ class MainWindow(QMainWindow):
             return
         self.order_input_edit.setText(file_path)
 
+    def handle_orders_input_drop(self, file_path: str):
+        if not file_path:
+            return
+        self.orders_input_edit.setText(file_path)
+
     def eventFilter(self, obj, event):
         wechat_edit = getattr(self, "wechat_input_edit", None)
         order_edit = getattr(self, "order_input_edit", None)
-        if obj in {wechat_edit, order_edit}:
+        orders_edit = getattr(self, "orders_input_edit", None)
+        if obj in {wechat_edit, order_edit, orders_edit}:
             if event.type() == QEvent.Type.DragEnter:
                 if event.mimeData().hasUrls():
                     urls = event.mimeData().urls()
@@ -841,6 +878,8 @@ class MainWindow(QMainWindow):
                         path = urls[0].toLocalFile()
                         if obj is wechat_edit:
                             self.handle_wechat_drop(path)
+                        elif obj is orders_edit:
+                            self.handle_orders_input_drop(path)
                         else:
                             self.handle_order_input_drop(path)
                         event.acceptProposedAction()

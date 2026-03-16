@@ -7,17 +7,42 @@
 import asyncio
 import json
 import time
+import os
 import pandas as pd
 from datetime import datetime
 from playwright.async_api import async_playwright, Page
 
 
+def load_env_file(env_path: str = ".env"):
+    if not os.path.isfile(env_path):
+        return
+    try:
+        with open(env_path, "r", encoding="utf-8") as f:
+            for raw_line in f:
+                line = raw_line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+                if key and key not in os.environ:
+                    os.environ[key] = value
+    except Exception:
+        pass
+
+
+def get_env(name: str, default: str = "") -> str:
+    return str(os.getenv(name, default) or "").strip()
+
+
+load_env_file()
+
 # ========== 配置区 ==========
 CONFIG = {
     "url": "https://58mhg.com/console/#/workbench",
     "login_url": "https://58mhg.com/console/#/login",
-    "username": "17783386425",       # ← 改成你的账号(手机号/邮箱)
-    "password": "zxcvbnm123..",       # ← 改成你的密码
+    "username": get_env("MHG_USERNAME"),  # 账号(手机号/邮箱)，放在 .env 中
+    "password": get_env("MHG_PASSWORD"),  # 密码，放在 .env 中
     "headless": False,            # False = 显示浏览器窗口，便于调试；True = 无头模式
     "output_file": f"orders_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
     "query_interval_seconds": 60, # 定时轮询间隔（秒），0 = 只查一次
@@ -30,6 +55,12 @@ async def login(page: Page):
     print("正在跳转登录页...")
     await page.goto(CONFIG["login_url"], wait_until="networkidle")
     await page.wait_for_timeout(2000)
+
+    if not CONFIG["username"] or not CONFIG["password"]:
+        print("❌ 未在 .env 中配置 MHG_USERNAME / MHG_PASSWORD")
+        print("等待30秒，请手动完成登录...")
+        await page.wait_for_timeout(30000)
+        return
 
     # 输入账号密码（选择器可能需要根据实际页面调整）
     try:
