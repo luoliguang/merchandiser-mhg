@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import re
 import shlex
 import subprocess
@@ -1022,7 +1023,7 @@ class MainWindow(QMainWindow):
             self.append_log(f"[INFO] 已启用微信比对文件: {Path(current).name}", "info")
             return
 
-        self.pick_file(self.wechat_input_edit)
+        self.pick_wechat_file()
         selected = self.wechat_input_edit.text().strip()
         if selected and Path(selected).exists():
             self.config["wechat_excel"] = selected
@@ -1051,9 +1052,13 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Script not found: {script}")
             return
 
+        cookie_val = self.config.get("cookie", "").strip()
+        if not cookie_val:
+            cookie_val = os.getenv("MHG_COOKIE", "").strip()
+
         args = [
             str(script), "--no-interactive", "--input", self.config.get("order_input_excel", ""),
-            "--output", self.config.get("order_output_excel", ""), "--cookie", self.config.get("cookie", ""),
+            "--output", self.config.get("order_output_excel", ""), "--cookie", cookie_val,
             "--start-date", self.config.get("start_date", ""), "--end-date", self.config.get("end_date", ""),
             "--delay", str(self.config.get("request_delay", "1.0") or "1.0"),
         ]

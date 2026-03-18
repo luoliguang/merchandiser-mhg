@@ -19,9 +19,12 @@ import re
 import hashlib
 import getpass
 import json
+import zipfile
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
+from docx import Document
+from docx.opc.exceptions import PackageNotFoundError
 
 
 def init_console_encoding():
@@ -391,15 +394,109 @@ def is_wechat_noise(text: str) -> bool:
     return t in noise_tokens
 
 
+def iter_docx_lines(doc_path: str):
+    if not zipfile.is_zipfile(doc_path):
+        raise ValueError(
+            f"文件不是有效的 DOCX（zip 容器）: {doc_path}\n"
+            "请确认文件后缀为 .docx，且不是 .doc 或已损坏文件。"
+        )
+    try:
+        doc = Document(str(doc_path))
+    except PackageNotFoundError as exc:
+        raise FileNotFoundError(f"无法打开 DOCX 文件: {doc_path}") from exc
+
+    for para in doc.paragraphs:
+        text = (para.text or "").strip()
+        if text:
+            yield text
+
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                text = (cell.text or "").strip()
+                if text:
+                    yield text
+
+
+def parse_docx_time_text(text: str, last_time: str) -> str:
+    normalized = text.replace("：", ":")
+    m = re.search(r"(?:(昨天)\s*)?(\d{1,2})月(\d{1,2})日(?:星期[一二三四五六日])?\s*(\d{1,2}):(\d{2})", normalized)
+    if m:
+        is_yesterday, month, day, hour, minute = m.groups()
+        dt = build_docx_datetime(is_yesterday, month, day, hour, minute)
+        return dt.strftime("%Y-%m-%d %H:%M:%S") if dt else last_time
+
+    m2 = re.search(r"(昨天)\s*(\d{1,2}):(\d{2})", normalized)
+    if m2:
+        is_yesterday, hour, minute = m2.groups()
+        dt = build_docx_datetime(is_yesterday, None, None, hour, minute)
+        return dt.strftime("%Y-%m-%d %H:%M:%S") if dt else last_time
+
+    return last_time
+
+
+def build_docx_datetime(is_yesterday: str | None, month: str | None, day: str | None, hour: str, minute: str):
+    now = datetime.now()
+    target_date = now.date()
+
+    if month and day:
+        try:
+            target_date = datetime(now.year, int(month), int(day)).date()
+        except ValueError:
+            target_date = now.date()
+    if is_yesterday:
+        target_date = (datetime.combine(target_date, datetime.min.time()) - timedelta(days=1)).date()
+
+    try:
+        dt = datetime.combine(target_date, datetime.min.time()).replace(hour=int(hour), minute=int(minute))
+    except ValueError:
+        return None
+    return dt
+
+
+def load_wechat_docx_rows(filepath: str) -> list:
+    if not filepath or not os.path.isfile(filepath):
+        return []
+
+    lines = list(iter_docx_lines(filepath))
+    rows = []
+    last_time_text = ""
+
+    for raw in lines:
+        text = str(raw or "").strip()
+        if not text:
+            continue
+
+        last_time_text = parse_docx_time_text(text, last_time_text)
+        codes = extract_order_codes_from_text(text)
+        if not codes:
+            continue
+
+        for code in codes:
+            rows.append({
+                "chat_time": last_time_text,
+                "content": text,
+                "order_code": code,
+                "base_code": get_base_code(code),
+                "source_file": os.path.basename(filepath),
+            })
+
+    return rows
+
+
 def load_wechat_export_rows(filepath: str) -> list:
     """
-    读取微信导出xlsx：
-    - 时间列 B
-    - 内容列 E
+    读取微信导出：支持 xlsx / docx
+    - xlsx: 时间列 B，内容列 E
+    - docx: 解析聊天内容
     返回明细行列表（一个内容可能提取多个单号，会拆多行）。
     """
     if not filepath or not os.path.isfile(filepath):
         return []
+
+    suffix = os.path.splitext(filepath)[1].lower()
+    if suffix == ".docx":
+        return load_wechat_docx_rows(filepath)
 
     wb = openpyxl.load_workbook(filepath, read_only=True, data_only=True)
     ws = wb.active
@@ -626,8 +723,11 @@ def match_wechat_shipping(oid: str, agg_map: dict):
     return False, "none", "", "", 0
 
 
-def final_shipping_status(order_status_text: str, has_shipping: bool) -> str:
+def final_shipping_status(order_status_text: str, has_shipping: bool, match_type: str) -> str:
     """最终发货判定。"""
+    if match_type == "exact" and has_shipping:
+        return "已发货"
+
     is_done = "打包完成" in str(order_status_text or "") or "已完成" in str(order_status_text or "")
 
     if is_done and has_shipping:
@@ -687,6 +787,7 @@ def query_order(keyword: str):
     for attempt in range(1, MAX_RETRY + 1):
         try:
             session = requests.Session()
+            session.trust_env = False  # 禁用系统代理，避免代理/证书导致请求失败
             headers = build_headers()
 
             # 先查总数
@@ -696,10 +797,21 @@ def query_order(keyword: str):
                 headers=headers,
                 timeout=15,
             )
-            count_data = count_resp.json()
+
+            try:
+                count_data = count_resp.json()
+            except Exception:
+                print(
+                    f"    [WARN] 接口返回非JSON（可能被风控/跳转/代理拦截），"
+                    f"status={count_resp.status_code}"
+                )
+                return False, []
 
             if count_data.get("code") != 200:
-                print(f"    [WARN] Cookie可能已过期，请重新复制Cookie后替换")
+                print(
+                    f"    [WARN] 接口未返回成功 code=200，"
+                    f"code={count_data.get('code')} msg={count_data.get('message', '')}"
+                )
                 return False, []
 
             total = int(count_data.get("data", 0))
@@ -741,6 +853,9 @@ def query_order(keyword: str):
 
             return True, exact_results
 
+        except requests.exceptions.SSLError as e:
+            print(f"    ⚠ SSL/证书错误: {e}")
+            return False, []
         except requests.exceptions.ConnectionError:
             print(f"    ⚠ 网络连接失败 (第{attempt}/{MAX_RETRY}次)，{RETRY_WAIT}秒后重试...")
         except requests.exceptions.Timeout:
@@ -781,7 +896,7 @@ def load_input_excel(filepath: str) -> pd.DataFrame:
     return df.reset_index(drop=True)
 
 
-def save_results(all_rows: list, filepath: str):
+def save_results(all_rows: list, filepath: str, include_wechat: bool = False):
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "查询结果"
@@ -793,8 +908,21 @@ def save_results(all_rows: list, filepath: str):
     header_fill = PatternFill("solid", start_color="4472C4")
     normal_font = Font(name="Arial", size=10)
 
-    headers = ["用户名", "原始输入", "查询编号", "订单编号(oId)", "订单内部ID(id)", "产品名称",
-               "颜色/规格", "总数量", "订单状态", "进度百分比", "微信匹配", "微信首现", "微信末现", "微信次数", "发货判定", "下单时间", "查询时间"]
+    headers = [
+        "用户名",
+        "原始输入",
+        "查询编号",
+        "订单编号(oId)",
+        "订单内部ID(id)",
+        "产品名称",
+        "颜色/规格",
+        "总数量",
+        "订单状态",
+        "进度百分比",
+    ]
+    if include_wechat:
+        headers += ["微信匹配", "微信首现", "微信末现", "微信次数", "发货判定"]
+    headers += ["下单时间", "查询时间"]
 
     for col, h in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=h)
@@ -817,11 +945,16 @@ def save_results(all_rows: list, filepath: str):
             row.get("totalQuantity", ""),
             row.get("状态文字", ""),
             row.get("进度百分比", ""),
-            row.get("微信匹配", ""),
-            row.get("微信首现", ""),
-            row.get("微信末现", ""),
-            row.get("微信次数", ""),
-            row.get("发货判定", ""),
+        ]
+        if include_wechat:
+            values += [
+                row.get("微信匹配", ""),
+                row.get("微信首现", ""),
+                row.get("微信末现", ""),
+                row.get("微信次数", ""),
+                row.get("发货判定", ""),
+            ]
+        values += [
             row.get("orderTime", ""),
             row.get("查询时间", ""),
         ]
@@ -833,7 +966,10 @@ def save_results(all_rows: list, filepath: str):
             cell.fill = row_fill
         ws.row_dimensions[row_idx].height = 18
 
-    col_widths = [12, 22, 14, 14, 16, 22, 16, 10, 14, 12, 10, 17, 17, 10, 22, 18, 18]
+    if include_wechat:
+        col_widths = [12, 22, 14, 14, 16, 22, 16, 10, 14, 12, 10, 17, 17, 10, 22, 18, 18]
+    else:
+        col_widths = [12, 22, 14, 14, 16, 22, 16, 10, 14, 12, 18, 18]
     for col, w in enumerate(col_widths, 1):
         ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = w
     ws.freeze_panes = "A2"
@@ -1021,7 +1157,7 @@ def main():
                 oid = str(order.get("oId", "")).strip()
                 if enable_wechat_compare:
                     has_ship, match_type, first_seen, last_seen, hit_count = match_wechat_shipping(oid, wechat_agg_map)
-                    ship_status = final_shipping_status(status_text, has_ship)
+                    ship_status = final_shipping_status(status_text, has_ship, match_type)
                 else:
                     match_type, first_seen, last_seen, hit_count = "N/A", "", "", ""
                     ship_status = "未启用微信比对"
@@ -1053,7 +1189,7 @@ def main():
         time.sleep(CONFIG["request_delay"])
 
     print(f"\n[STEP 4/5] 保存结果...")
-    save_results(all_rows, output_excel)
+    save_results(all_rows, output_excel, include_wechat=enable_wechat_compare)
 
     print(f"\n[STEP 5/5] 查询完成")
     print(f"{'='*55}")

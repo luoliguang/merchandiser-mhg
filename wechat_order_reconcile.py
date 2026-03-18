@@ -45,7 +45,7 @@ def init_console_encoding():
 
 
 ORDER_PATTERN = re.compile(r"\d{4,}(?:-\d+)*")
-DOCX_ORDER_PATTERN = re.compile(r"(?<!\d)[1-9]\d{4,7}(?:-\d{1,3}){0,3}(?!\d)")
+DOCX_ORDER_PATTERN = re.compile(r"(?<!\d)[1-9]\d{4,8}(?:-\d{1,4}){0,4}(?!\d)")
 DOCX_TIME_PATTERN = re.compile(
     r"(?:(昨天)\s*)?(\d{1,2})月(\d{1,2})日(?:星期[一二三四五六日])?\s*(\d{1,2}):(\d{2})"
 )
@@ -236,6 +236,17 @@ def load_input_orders(input_path: Path, source_type: str) -> pd.DataFrame:
     return load_wechat_orders(input_path)
 
 
+def parse_chat_time(series: pd.Series) -> pd.Series:
+    cleaned = series.fillna("").astype(str).str.strip()
+    fmt_full = pd.to_datetime(cleaned, format="%Y-%m-%d %H:%M:%S", errors="coerce")
+    if fmt_full.notna().any():
+        return fmt_full
+    fmt_short = pd.to_datetime(cleaned, format="%m-%d %H:%M", errors="coerce")
+    if fmt_short.notna().any():
+        return fmt_short
+    return pd.to_datetime(cleaned, errors="coerce")
+
+
 def build_clean_orders(raw_imports: pd.DataFrame) -> pd.DataFrame:
     if raw_imports.empty:
         return pd.DataFrame(
@@ -243,7 +254,7 @@ def build_clean_orders(raw_imports: pd.DataFrame) -> pd.DataFrame:
         )
 
     tmp = raw_imports.copy()
-    tmp["chat_time_dt"] = pd.to_datetime(tmp["chat_time"], errors="coerce")
+    tmp["chat_time_dt"] = parse_chat_time(tmp["chat_time"])
     tmp["fallback_dt"] = pd.to_datetime(tmp["import_time"], errors="coerce")
     tmp["time_for_stats"] = tmp["chat_time_dt"].fillna(tmp["fallback_dt"])
 

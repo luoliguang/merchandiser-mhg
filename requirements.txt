@@ -3,3 +3,4 @@ pandas
 openpyxl
 PySide6
 python-docx
+playwright
