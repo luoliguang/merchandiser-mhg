@@ -1,23 +1,42 @@
 # 棉花果订单工具使用文档
 
-本项目包含一套面向 `58mhg.com` 的订单处理脚本，主要分为两步：
-
-1. 扫描网盘订单文件夹，生成订单清单 Excel。
-2. 根据订单清单批量查询订单进度，输出结果 Excel。
+本项目是一套面向 `58mhg.com` 的订单处理工具，包含扫描订单、批量查询进度以及微信发货比对等流程。本文档整合模块说明与使用指引，便于统一维护与交接。
 
 ---
 
 ## 一、项目文件说明
 
-- `scan_orders_main.py`：扫描订单 Excel（子文件夹内），生成 `orders_时间戳.xlsx`
-- `mhg_batch_query.py`：读取订单清单，批量查询订单状态并导出结果
-- `set_password.py`：设置启动密码（生成 `auth_config.json`）
-- `build_exe.py`：将 `scan_orders_main.py` 打包为 exe
-- `auth_config.json`：启动密码哈希配置（需与脚本/exe同目录）
+- `scan_orders_main.py`：扫描订单 Excel（子文件夹内），生成 `orders_时间戳.xlsx`。
+- `mhg_batch_query.py`：读取订单清单，批量查询订单状态并导出结果。
+- `wechat_order_reconcile.py`：对接微信导出表，与订单结果进行发货比对并汇总。
+- `set_password.py`：设置启动密码（生成 `auth_config.json`）。
+- `build_exe.py`：将脚本打包为 exe。
+- `auth_config.json`：启动密码哈希配置（需与脚本或 exe 同目录）。
 
 ---
 
-## 二、运行环境
+## 二、模块说明
+
+### 1. 界面模块说明
+
+界面模块以命令行交互为主，负责参数输入与运行引导。主要特征如下：
+
+- 运行时通过命令行提示用户输入文件路径、日期范围等配置，并支持拖拽 Excel 文件到终端自动带入路径。
+- 支持默认值回填，便于批量运行时快速确认输入。
+- 对输出结果进行颜色标注与状态提示，增强可读性。
+- 界面配置参数会持久化保存（例如 `gui_config.json`），实现“上次输入自动回填”。
+
+### 2. 数据模块说明
+
+数据模块负责配置与运行数据的持久化管理，主要包含三类数据文件：
+
+1) **运行记录与历史日志**：`run_history.csv` 记录每次任务执行的时间、任务类型、状态、耗时与参数，便于回溯与审计。  
+2) **本地配置与安全信息**：`gui_config.json` 保存界面输入的最新参数（如路径、时间区间、开关等），用于下次启动时自动回填；`auth_config.json` 仅保存加密后的密码哈希与提示信息，避免明文存储。  
+3) **接口样例与数据参考**：`referencePaper/*.json` 用于保存接口返回的结构样例（订单列表、工序进度等），作为数据解析与对照的参考资料。
+
+---
+
+## 三、运行环境
 
 - Windows 10/11（推荐）
 - Python 3.9+
@@ -32,7 +51,7 @@ pip install openpyxl requests pandas pyinstaller
 
 ---
 
-## 三、首次使用（必须）
+## 四、首次使用（必须）
 
 ### 1）设置启动密码
 
@@ -55,7 +74,7 @@ python set_password.py
 
 ---
 
-## 四、步骤1：扫描订单并生成清单
+## 五、步骤1：扫描订单并生成清单
 
 运行：
 
@@ -93,7 +112,7 @@ python scan_orders_main.py
 
 ---
 
-## 五、步骤2：批量查询订单进度
+## 六、步骤2：批量查询订单进度
 
 运行前先编辑 `mhg_batch_query.py` 顶部 `CONFIG`：
 
@@ -120,7 +139,25 @@ python mhg_batch_query.py
 
 ---
 
-## 六、打包为 EXE（可选）
+## 七、步骤3：微信发货比对（可选）
+
+可选运行微信发货比对，输出核对结果并写入汇总库。
+
+运行示例：
+
+```bash
+python wechat_order_reconcile.py --log data/wechat_shipment_log.xlsx --output data/reconcile_result.xlsx --wechat data/群聊_单号群.xlsx --orders data/orders_result.xlsx
+```
+
+主要作用：
+
+- 将微信导出表与订单查询结果做匹配
+- 标记已发货、未发货、异常项
+- 可将结果写入历史汇总库便于持续追踪
+
+---
+
+## 八、打包为 EXE（可选）
 
 执行：
 
@@ -136,7 +173,7 @@ python build_exe.py
 
 ---
 
-## 七、常见问题
+## 九、常见问题
 
 ### 1）提示“未读取到密码配置”
 
@@ -168,14 +205,11 @@ python build_exe.py
 
 ---
 
-## 八、推荐使用流程（简版）
+## 十、推荐使用流程（简版）
 
 1. `python set_password.py`
 2. `python scan_orders_main.py`（生成 `orders_*.xlsx`）
 3. 更新 `mhg_batch_query.py` 的 `CONFIG`（Cookie + input_excel）
 4. `python mhg_batch_query.py`
-5. 查看导出的结果 Excel
-
----
-
-如需，我可以继续帮你补一份“给同事看的 1 页傻瓜版操作手册”（更短、更偏业务操作）。
+5. （可选）`python wechat_order_reconcile.py`
+6. 查看导出的结果 Excel
